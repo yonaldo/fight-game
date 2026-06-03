@@ -248,6 +248,16 @@
     <div class="waiting-msg hidden" id="waiting-msg">
         等待加入... 当前排队: <span id="queue-pos">0</span>
     </div>
+    
+    <!-- Game Over 弹窗 -->
+    <div class="modal hidden" id="gameover-modal">
+        <div class="modal-content">
+            <h2 style="color: #e94560;">💀 GAME OVER</h2>
+            <p style="margin: 15px 0; color: #ccc;">你已被击杀！</p>
+            <p style="color: #f9d342;">击杀数: <span id="final-kills">0</span></p>
+            <button onclick="rejoinGame()" style="background: #4ecca3;">重新加入</button>
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -302,6 +312,11 @@
         socket.on('playerHit', (data) => {
             if (players[data.playerId]) {
                 players[data.playerId].hp = data.hp;
+                
+                // 检测本地玩家是否死亡
+                if (data.playerId === localPlayerId && data.hp <= 0) {
+                    showGameOver();
+                }
             }
         });
         
@@ -336,6 +351,29 @@
         
         playerName = name;
         socket.emit('join', { name: name });
+    }
+    
+    // 显示 Game Over
+    function showGameOver() {
+        const kills = players[localPlayerId]?.kills || 0;
+        document.getElementById('final-kills').textContent = kills;
+        document.getElementById('gameover-modal').classList.remove('hidden');
+    }
+    
+    // 重新加入游戏
+    function rejoinGame() {
+        // 隐藏 Game Over
+        document.getElementById('gameover-modal').classList.add('hidden');
+        
+        // 重置状态
+        gameStarted = false;
+        localPlayerId = null;
+        players = {};
+        projectiles = [];
+        
+        // 显示名字输入框
+        document.getElementById('name-modal').classList.remove('hidden');
+        document.getElementById('player-name').value = playerName;
     }
     
     // 倒计时
