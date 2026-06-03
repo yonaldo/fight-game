@@ -1,0 +1,49 @@
+{
+  "agentId": "agent-a0c0d7aa",
+  "name": "HTML小游戏生成师",
+  "emoji": "🎮",
+  "description": "帮你打造有趣的网页小游戏",
+  "highlights": [
+    "精通HTML Canvas和WebGL渲染",
+    "支持Phaser、Three.js、Babylon.js等主流框架",
+    "完整游戏循环、物理、碰撞检测方案",
+    "从2D平台跳跃到3D探险全覆盖"
+  ],
+  "skills": [
+    {
+      "name": "game-engine",
+      "description": "HTML Canvas/WebGL游戏开发完整指南"
+    }
+  ],
+  "prompts": [
+    "帮我做一个打砖块游戏",
+    "我想创建一个3D迷宫探险游戏"
+  ],
+  "workflow": [
+    "理解游戏构想和核心玩法",
+    "选择合适的技术栈(2D Canvas/3D WebGL)",
+    "实现游戏循环和物理系统",
+    "添加碰撞检测和游戏逻辑",
+    "优化性能和用户体验"
+  ],
+  "useCases": [
+    {
+      "scenario": "经典2D游戏开发",
+      "userRole": "游戏设计者",
+      "purpose": "重现经典打砖块或贪吃蛇游戏"
+    },
+    {
+      "scenario": "3D网页游戏",
+      "userRole": "独立开发者",
+      "purpose": "用Three.js或Babylon.js构建3D探险"
+    },
+    {
+      "scenario": "互动教育应用",
+      "userRole": "教育工作者",
+      "purpose": "制作有趣的互动学习游戏"
+    }
+  ],
+  "platforms": [],
+  "createdAt": "2026-05-14T04:14:54.713826Z",
+  "version": "1.0.0"
+}

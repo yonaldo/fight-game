@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>格子格斗 - 4人对战</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+        }
+        #game-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        /* 排行榜 */
+        .rankings {
+            width: 200px;
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .rankings h3 {
+            font-size: 14px;
+            color: #f9d342;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 12px;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        .rank-item:last-child { border-bottom: none; }
+        
+        .left-panel {
+            width: 200px;
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        .left-panel h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #4ecca3;
+        }
+        .left-panel h3 {
+            font-size: 14px;
+            margin: 15px 0 8px;
+            color: #f9d342;
+        }
+        .left-panel p, .left-panel li {
+            font-size: 12px;
+            color: #ccc;
+            line-height: 1.6;
+        }
+        .left-panel ul {
+            padding-left: 18px;
+        }
+        #game-container {
+            position: relative;
+            background: #16213e;
+            border: 4px solid #0f3460;
+            border-radius: 8px;
+        }
+        canvas { display: block; }
+        
+        .right-panel {
+            width: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .player-info {
+            background: #0f3460;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            border-left: 4px solid;
+        }
+        .health-bar {
+            display: flex;
+            gap: 3px;
+            margin-top: 4px;
+        }
+        .heart {
+            width: 12px;
+            height: 12px;
+            background: #e94560;
+            border-radius: 50%;
+        }
+        .heart.lost { background: #333; }
+        
+        /* 弹窗 */
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal.hidden { display: none; }
+        .modal-content {
+            background: #16213e;
+            padding: 30px 40px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid #0f3460;
+        }
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #4ecca3;
+        }
+        .modal-content input {
+            width: 200px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #0f3460;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            text-align: center;
+        }
+        .modal-content button {
+            margin-top: 20px;
+            padding: 12px 40px;
+            font-size: 16px;
+            background: #4ecca3;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .modal-content button:hover {
+            background: #3db892;
+        }
+        .error-msg {
+            color: #e94560;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        
+        /* 倒计时 */
+        .countdown {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-weight: bold;
+            color: #f9d342;
+            text-shadow: 0 0 20px #f9d342;
+            z-index: 10;
+        }
+        .countdown.hidden { display: none; }
+        
+        /* 等待提示 */
+        .waiting-msg {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px 50px;
+            border-radius: 16px;
+            font-size: 18px;
+            z-index: 200;
+        }
+        .waiting-msg.hidden { display: none; }
+        
+        /* 无敌提示 */
+        .invincible {
+            position: absolute;
+            top: 10px; left: 50%;
+            transform: translateX(-50%);
+            color: #f9d342;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #f9d342;
+        }
+        .invincible.hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="rankings" id="rankings">
+        <h3>🏆 击杀排行</h3>
+        <div id="rank-list"></div>
+    </div>
+    
+    <div id="game-wrapper">
+        <div class="left-panel">
+            <h2>📖 游戏说明</h2>
+            <h3>游戏规则</h3>
+            <ul>
+                <li>4人对战，活到最后获胜</li>
+                <li>每人3点血，被攻击扣1血</li>
+                <li>攻击有5秒冷却时间</li>
+                <li>同一横线或竖线的敌人会被击中</li>
+                <li>新玩家有10秒无敌时间</li>
+            </ul>
+            <h3>🎮 操作说明</h3>
+            <ul>
+                <li><strong>W</strong> - 上</li>
+                <li><strong>S</strong> - 下</li>
+                <li><strong>A</strong> - 左</li>
+                <li><strong>D</strong> - 右</li>
+                <li><strong>J</strong> - 攻击</li>
+            </ul>
+        </div>
+        
+        <div>
+            <div id="game-container">
+                <canvas id="canvas" width="500" height="500"></canvas>
+                <div class="countdown hidden" id="countdown">5</div>
+                <div class="invincible hidden" id="invincible">🛡️ 无敌中</div>
+            </div>
+        </div>
+        
+        <div class="right-panel" id="info-panel"></div>
+    </div>
+    
+    <!-- 输入名字弹窗 -->
+    <div class="modal" id="name-modal">
+        <div class="modal-content">
+            <h2>🎮 进入游戏</h2>
+            <p style="margin-bottom: 15px; color: #ccc;">请输入你的名字（2-10字符）</p>
+            <input type="text" id="player-name" placeholder="输入名字" maxlength="10">
+            <div class="error-msg" id="error-msg"></div>
+            <button onclick="joinGame()">加入游戏</button>
+        </div>
+    </div>
+    
+    <!-- 等待提示 -->
+    <div class="waiting-msg hidden" id="waiting-msg">
+        等待加入... 当前排队: <span id="queue-pos">0</span>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+    const GRID_SIZE = 10;
+    const CELL_SIZE = 50;
+    const ATTACK_CD = 5000;
+    const INVINCIBLE_TIME = 10000;
+    
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    let socket;
+    let players = {};
+    let projectiles = [];
+    let localPlayerId = null;
+    let gameStarted = false;
+    let playerName = '';
+    
+    // 连接服务器
+    function connectServer() {
+        socket = io();
+        
+        socket.on('joined', (data) => {
+            localPlayerId = data.playerId;
+            players = data.allPlayers;
+            document.getElementById('name-modal').classList.add('hidden');
+            startCountdown();
+        });
+        
+        socket.on('waiting', (data) => {
+            document.getElementById('queue-pos').textContent = data.position;
+            document.getElementById('waiting-msg').classList.remove('hidden');
+        });
+        
+        socket.on('playerJoined', (data) => {
+            players[data.player.id] = data.player;
+        });
+        
+        socket.on('playerLeft', (data) => {
+            if (players[data.id]) {
+                delete players[data.id];
+            }
+        });
+        
+        socket.on('playerMoved', (data) => {
+            if (players[data.id]) {
+                players[data.id].x = data.x;
+                players[data.id].y = data.y;
+            }
+        });
+        
+        socket.on('playerHit', (data) => {
+            if (players[data.playerId]) {
+                players[data.playerId].hp = data.hp;
+            }
+        });
+        
+        socket.on('projectilesUpdate', (data) => {
+            projectiles = data.projectiles;
+        });
+        
+        socket.on('rankingsUpdate', (data) => {
+            updateRankings(data.rankings);
+        });
+    }
+    
+    // 加入游戏
+    function joinGame() {
+        const input = document.getElementById('player-name');
+        const name = input.value.trim();
+        
+        if (name.length < 2 || name.length > 10) {
+            document.getElementById('error-msg').textContent = '名字需要2-10个字符';
+            return;
+        }
+        
+        playerName = name;
+        socket.emit('join', { name: name });
+    }
+    
+    // 倒计时
+    function startCountdown() {
+        const countdownEl = document.getElementById('countdown');
+        let count = 5;
+        countdownEl.classList.remove('hidden');
+        countdownEl.textContent = count;
+        
+        const timer = setInterval(() => {
+            count--;
+            if (count > 0) {
+                countdownEl.textContent = count;
+            } else {
+                clearInterval(timer);
+                countdownEl.classList.add('hidden');
+                gameStarted = true;
+            }
+        }, 1000);
+    }
+    
+    // 更新排行榜
+    function updateRankings(rankings) {
+        const list = document.getElementById('rank-list');
+        if (rankings.length === 0) {
+            list.innerHTML = '<div style="text-align:center;color:#666;font-size:12px">暂无数据</div>';
+            return;
+        }
+        list.innerHTML = rankings.map((r, i) => `
+            <div class="rank-item">
+                <span>${i+1}. ${r.name}</span>
+                <span style="color:${r.color}">${r.kills}杀</span>
+            </div>
+        `).join('');
+    }
+    
+    // 绘制棋盘
+    function drawGrid() {
+        ctx.fillStyle = '#16213e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = '#0f3460';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= GRID_SIZE; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * CELL_SIZE, 0);
+            ctx.lineTo(i * CELL_SIZE, canvas.height);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, i * CELL_SIZE);
+            ctx.lineTo(canvas.width, i * CELL_SIZE);
+            ctx.stroke();
+        }
+        
+        ctx.fillStyle = '#0f3460';
+        ctx.beginPath();
+        ctx.arc(5*CELL_SIZE - CELL_SIZE/2, 5*CELL_SIZE - CELL_SIZE/2, 15, 0, Math.PI*2);
+        ctx.fill();
+    }
+    
+    // 绘制武器
+    function drawWeapon(p, cx, cy) {
+        const weaponOffset = p.positionIndex === 0 ? {x: 12, y: 8} : 
+                            p.positionIndex === 1 ? {x: -20, y: 8} :
+                            p.positionIndex === 2 ? {x: 12, y: -5} : {x: -20, y: -5};
+        
+        const wx = cx + weaponOffset.x;
+        const wy = cy + weaponOffset.y;
+        
+        ctx.save();
+        ctx.translate(wx, wy);
+        
+        if (p.positionIndex === 0) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-3, 5);
+            ctx.lineTo(0, -8);
+            ctx.lineTo(3, 5);
+            ctx.stroke();
+        } else if (p.positionIndex === 1) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(0, 8);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, -10, 2, 0, Math.PI*2);
+            ctx.fill();
+        } else if (p.positionIndex === 2) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 6);
+            ctx.lineTo(0, -10);
+            ctx.moveTo(-3, 0);
+            ctx.lineTo(3, 0);
+            ctx.stroke();
+        } else {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 8);
+            ctx.lineTo(0, -10);
+            ctx.moveTo(-4, -5);
+            ctx.lineTo(4, -5);
+            ctx.stroke();
+        }
+        
+        ctx.restore();
+    }
+    
+    // 绘制玩家
+    function drawPlayer(p) {
+        if (p.hp <= 0) return;
+        
+        const cx = p.x * CELL_SIZE + CELL_SIZE/2;
+        const cy = p.y * CELL_SIZE + CELL_SIZE/2;
+        
+        // 无敌闪烁效果
+        if (p.invincibleUntil && Date.now() < p.invincibleUntil) {
+            if (Math.floor(Date.now() / 200) % 2 === 0) return;
+        }
+        
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        
+        // 头
+        ctx.beginPath();
+        ctx.arc(cx, cy - 12, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 身体
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 4);
+        ctx.lineTo(cx, cy + 12);
+        ctx.stroke();
+        
+        // 手臂
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy + 2);
+        ctx.lineTo(cx + 10, cy + 2);
+        ctx.stroke();
+        
+        // 腿
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, cy + 20);
+        ctx.lineTo(cx, cy + 12);
+        ctx.lineTo(cx + 8, cy + 20);
+        ctx.stroke();
+        
+        // 武器
+        drawWeapon(p, cx, cy);
+        
+        // 名字
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, cx, p.y * CELL_SIZE - 12);
+        
+        // 血条
+        for (let i = 0; i < 3; i++) {
+            ctx.fillStyle = i < p.hp ? '#e94560' : '#333';
+            ctx.fillRect(p.x * CELL_SIZE + i * 14 + 5, p.y * CELL_SIZE - 5, 10, 6);
+        }
+        
+        // CD指示器
+        if (p.lastAttack) {
+            const now = Date.now();
+            const cdLeft = Math.max(0, ATTACK_CD - (now - p.lastAttack));
+            if (cdLeft > 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.font = '10px Arial';
+                ctx.fillText(Math.ceil(cdLeft/1000)+'s', cx, cy + 25);
+            }
+        }
+    }
+    
+    // 绘制弹道
+    function drawProjectiles() {
+        projectiles.forEach(proj => {
+            ctx.fillStyle = proj.color;
+            ctx.beginPath();
+            ctx.arc(
+                proj.x * CELL_SIZE + CELL_SIZE/2,
+                proj.y * CELL_SIZE + CELL_SIZE/2,
+                8, 0, Math.PI*2
+            );
+            ctx.fill();
+            
+            ctx.shadowColor = proj.color;
+            ctx.shadowBlur = 15;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+    }
+    
+    // 按键
+    const keys = {};
+    let lastMoveTime = 0;
+    const MOVE_DELAY = 150;
+    
+    document.addEventListener('keydown', e => {
+        keys[e.key.toLowerCase()] = true;
+        
+        if (e.key.toLowerCase() === 'j' && gameStarted) {
+            socket.emit('attack');
+        }
+    });
+    document.addEventListener('keyup', e => {
+        keys[e.key.toLowerCase()] = false;
+    });
+    
+    // 移动
+    function tryMove() {
+        const now = Date.now();
+        if (now - lastMoveTime > MOVE_DELAY) {
+            let dx = 0, dy = 0;
+            if (keys['w']) dy = -1;
+            else if (keys['s']) dy = 1;
+            else if (keys['a']) dx = -1;
+            else if (keys['d']) dx = 1;
+            
+            if (dx !== 0 || dy !== 0) {
+                socket.emit('move', { dx, dy });
+                lastMoveTime = now;
+            }
+        }
+    }
+    
+    // 更新无敌显示
+    function updateInvincible() {
+        const p = players[localPlayerId];
+        const el = document.getElementById('invincible');
+        if (p && p.invincibleUntil && Date.now() < p.invincibleUntil) {
+            const left = Math.ceil((p.invincibleUntil - Date.now()) / 1000);
+            el.textContent = `🛡️ 无敌中 ${left}s`;
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    }
+    
+    // 更新信息面板
+    function updateInfoPanel() {
+        const panel = document.getElementById('info-panel');
+        const playerList = Object.values(players);
+        
+        panel.innerHTML = playerList.map(p => `
+            <div class="player-info" style="border-left-color: ${p.color}">
+                <div>${p.weapon} ${p.name} ${p.hp <= 0 ? '(阵亡)' : ''}</div>
+                <div class="health-bar">
+                    ${[0,1,2].map(i => `<div class="heart ${i >= p.hp ? 'lost' : ''}"></div>`).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // 游戏循环
+    function gameLoop() {
+        if (gameStarted && localPlayerId) {
+            tryMove();
+        }
+        
+        drawGrid();
+        drawProjectiles();
+        Object.values(players).forEach(drawPlayer);
+        
+        updateInfoPanel();
+        updateInvincible();
+        
+        requestAnimationFrame(gameLoop);
+    }
+    
+    // 启动
+    connectServer();
+    gameLoop();
+    
+    document.getElementById('player-name').addEventListener('keypress', e => {
+        if (e.key === 'Enter') joinGame();
+    });
+    </script>
+</body>
+</html>
