@@ -9,8 +9,11 @@ const io = new Server(server, {
   cors: { origin: '*' }
 });
 
+// 静态文件服务
+app.use(express.static('.'));
+
 app.get('/', (req, res) => {
-  res.send('格子格斗服务器运行中');
+  res.sendFile(__dirname + '/fight-game.html');
 });
 
 // 游戏状态
