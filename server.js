@@ -309,5 +309,5 @@ function updateRankings() {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`格子格斗服务器运行在端口 ${PORT}`);
+  console.log(`騳团专用PK格斗器 服务器运行在端口 ${PORT}`);
 });
