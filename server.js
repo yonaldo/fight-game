@@ -280,10 +280,15 @@ setInterval(() => {
   // 移除
   toRemove.sort((a,b) => b-a).forEach(i => gameState.projectiles.splice(i, 1));
   
-  // 同步弹道
-  if (gameState.projectiles.length > 0) {
-    io.emit('projectilesUpdate', { projectiles: gameState.projectiles });
-  }
+  // 同步弹道（总是发送，确保客户端清空消失的弹道）
+  io.emit('projectilesUpdate', { projectiles: gameState.projectiles });
+  
+  // 同步玩家CD状态（让客户端知道冷却时间）
+  const playerStates = {};
+  Object.values(gameState.players).forEach(p => {
+    playerStates[p.id] = { lastAttack: p.lastAttack, invincibleUntil: p.invincibleUntil };
+  });
+  io.emit('playerStatesUpdate', { states: playerStates });
   
   // 同步排行榜
   io.emit('rankingsUpdate', { rankings: getRankings() });

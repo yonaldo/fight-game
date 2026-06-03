@@ -309,6 +309,16 @@
             projectiles = data.projectiles;
         });
         
+        socket.on('playerStatesUpdate', (data) => {
+            // 同步玩家的 lastAttack 和无敌状态
+            Object.keys(data.states).forEach(id => {
+                if (players[id]) {
+                    players[id].lastAttack = data.states[id].lastAttack;
+                    players[id].invincibleUntil = data.states[id].invincibleUntil;
+                }
+            });
+        });
+        
         socket.on('rankingsUpdate', (data) => {
             updateRankings(data.rankings);
         });
