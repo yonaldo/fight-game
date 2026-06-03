@@ -268,12 +268,7 @@
     
     // 连接服务器
     function connectServer() {
-        socket = io({
-            reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000
-        });
+        socket = io();
         
         socket.on('joined', (data) => {
             localPlayerId = data.playerId;
@@ -301,11 +296,6 @@
             if (players[data.id]) {
                 players[data.id].x = data.x;
                 players[data.id].y = data.y;
-                // 更新服务器端确认的位置（用于修正）
-                if (data.id === localPlayerId) {
-                    lastConfirmedX = data.x;
-                    lastConfirmedY = data.y;
-                }
             }
         });
         
@@ -538,9 +528,7 @@
     // 按键
     const keys = {};
     let lastMoveTime = 0;
-    const MOVE_DELAY = 50; // 降低移动延迟
-    let localX = 0, localY = 0; // 本地预测位置
-    let lastConfirmedX = 0, lastConfirmedY = 0;
+    const MOVE_DELAY = 150;
     
     document.addEventListener('keydown', e => {
         keys[e.key.toLowerCase()] = true;
@@ -564,12 +552,6 @@
             else if (keys['d']) dx = 1;
             
             if (dx !== 0 || dy !== 0) {
-                // **客户端预测** -立即更新本地位置
-                localX += dx;
-                localY += dy;
-                players[localPlayerId].x = localX;
-                players[localPlayerId].y = localY;
-                
                 socket.emit('move', { dx, dy });
                 lastMoveTime = now;
             }
@@ -608,17 +590,6 @@
     function gameLoop() {
         if (gameStarted && localPlayerId) {
             tryMove();
-            
-            // **修正位置** -如果服务器确认的位置和本地预测偏差太大，强制修正
-            const p = players[localPlayerId];
-            if (p && (lastConfirmedX !== undefined)) {
-                if (Math.abs(p.x - lastConfirmedX) > 2 || Math.abs(p.y - lastConfirmedY) > 2) {
-                    p.x = lastConfirmedX;
-                    p.y = lastConfirmedY;
-                    localX = lastConfirmedX;
-                    localY = lastConfirmedY;
-                }
-            }
         }
         
         drawGrid();
@@ -630,10 +601,6 @@
         
         requestAnimationFrame(gameLoop);
     }
-    
-    // **初始化本地位置**
-    socket.on('joined', (data) => {
-        localPlayerId = data.playerId;
     
     // 启动
     connectServer();
