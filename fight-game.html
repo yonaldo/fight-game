@@ -320,6 +320,17 @@
             }
         });
         
+        socket.on('playerRespawned', (data) => {
+            if (players[data.playerId]) {
+                players[data.playerId].x = data.x;
+                players[data.playerId].y = data.y;
+                players[data.playerId].hp = data.hp;
+                players[data.playerId].invincibleUntil = data.invincibleUntil;
+                // 重新加入后关闭 Game Over
+                document.getElementById('gameover-modal').classList.add('hidden');
+            }
+        });
+        
         socket.on('projectilesUpdate', (data) => {
             projectiles = data.projectiles;
         });
@@ -405,7 +416,7 @@
         list.innerHTML = rankings.map((r, i) => `
             <div class="rank-item">
                 <span>${i+1}. ${r.name}</span>
-                <span style="color:${r.color}">${r.kills}杀</span>
+                <span style="color:${r.color}">${r.kills}杀/${r.deaths}死</span>
             </div>
         `).join('');
     }
