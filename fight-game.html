@@ -1,673 +1,275 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>騳团专用PK格斗器</title>
+    <title>騳团大乱斗</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #1a1a2e;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            font-family: 'Arial', sans-serif;
-            color: #fff;
-        }
-        #game-wrapper {
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-        }
-        
-        /* 排行榜 */
-        .rankings {
-            width: 200px;
-            background: #0f3460;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-        }
-        .rankings h3 {
-            font-size: 14px;
-            color: #f9d342;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .rank-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            font-size: 12px;
-            border-bottom: 1px solid #1a1a2e;
-        }
+        body { background: #1a1a2e; font-family: 'Microsoft YaHei','Arial',sans-serif; color: #fff; height: 100vh; overflow: hidden; }
+        #game-wrapper { display: flex; flex-direction: column; width: 100vw; height: 100vh; padding: 10px; gap: 10px; }
+        #top-player-strip { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; background: #0f3460; border-radius: 8px; flex-shrink: 0; }
+        .top-player-card { background: #16213e; border-radius: 6px; padding: 4px 8px; text-align: center; border-left: 3px solid; min-width: 0; position: relative; }
+        .top-player-card .name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+        .top-player-card .hp-row { display: flex; justify-content: center; gap: 2px; margin-top: 2px; }
+        .hp-dot { width: 8px; height: 8px; border-radius: 50%; background: #e94560; }
+        .hp-dot.lost { background: #333; }
+        .effect-badges { display: flex; justify-content: center; gap: 2px; margin-top: 2px; font-size: 10px; flex-wrap: wrap; }
+        #main-row { display: flex; gap: 10px; flex: 1; min-height: 0; }
+        .rankings { flex: 3; background: #0f3460; padding: 10px 12px; border-radius: 10px; display: flex; flex-direction: column; }
+        .rankings h3 { font-size: 12px; color: #f9d342; margin-bottom: 8px; flex-shrink: 0; }
+        .rank-item { display: flex; justify-content: space-between; padding: 4px 2px; font-size: 11px; border-bottom: 1px solid #1a1a2e; }
         .rank-item:last-child { border-bottom: none; }
-        
-        .left-panel {
-            width: 200px;
-            background: #0f3460;
-            padding: 20px;
-            border-radius: 12px;
-        }
-        .left-panel h2 {
-            font-size: 16px;
-            margin-bottom: 15px;
-            color: #4ecca3;
-        }
-        .left-panel h3 {
-            font-size: 14px;
-            margin: 15px 0 8px;
-            color: #f9d342;
-        }
-        .left-panel p, .left-panel li {
-            font-size: 12px;
-            color: #ccc;
-            line-height: 1.6;
-        }
-        .left-panel ul {
-            padding-left: 18px;
-        }
-        #game-container {
-            position: relative;
-            background: #16213e;
-            border: 4px solid #0f3460;
-            border-radius: 8px;
-        }
-        canvas { display: block; }
-        
-        .right-panel {
-            width: 180px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .player-info {
-            background: #0f3460;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 13px;
-            border-left: 4px solid;
-        }
-        .health-bar {
-            display: flex;
-            gap: 3px;
-            margin-top: 4px;
-        }
-        .heart {
-            width: 12px;
-            height: 12px;
-            background: #e94560;
-            border-radius: 50%;
-        }
-        .heart.lost { background: #333; }
-        
-        /* 弹窗 */
-        .modal {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
         .modal.hidden { display: none; }
-        .modal-content {
-            background: #16213e;
-            padding: 30px 40px;
-            border-radius: 16px;
-            text-align: center;
-            border: 2px solid #0f3460;
-        }
-        .modal-content h2 {
-            margin-bottom: 20px;
-            color: #4ecca3;
-        }
-        .modal-content input {
-            width: 200px;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid #0f3460;
-            border-radius: 8px;
-            background: #1a1a2e;
-            color: #fff;
-            text-align: center;
-        }
-        .modal-content button {
-            margin-top: 20px;
-            padding: 12px 40px;
-            font-size: 16px;
-            background: #4ecca3;
-            color: #1a1a2e;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .modal-content button:hover {
-            background: #3db892;
-        }
-        .error-msg {
-            color: #e94560;
-            font-size: 13px;
-            margin-top: 10px;
-        }
-        
-        /* 倒计时 */
-        .countdown {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 80px;
-            font-weight: bold;
-            color: #f9d342;
-            text-shadow: 0 0 20px #f9d342;
-            z-index: 10;
-        }
+        .modal-content { background: #16213e; padding: 25px 35px; border-radius: 14px; text-align: center; border: 2px solid #0f3460; }
+        .modal-content h2 { margin-bottom: 15px; color: #4ecca3; }
+        .modal-content input { width: 180px; padding: 10px; font-size: 15px; border: 2px solid #0f3460; border-radius: 8px; background: #1a1a2e; color: #fff; text-align: center; }
+        .modal-content button { margin-top: 15px; padding: 10px 35px; font-size: 15px; background: #4ecca3; color: #1a1a2e; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .error-msg { color: #e94560; font-size: 12px; margin-top: 8px; }
+        .countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 60px; font-weight: bold; color: #f9d342; text-shadow: 0 0 20px #f9d342; z-index: 10; }
         .countdown.hidden { display: none; }
-        
-        /* 等待提示 */
-        .waiting-msg {
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9);
-            padding: 30px 50px;
-            border-radius: 16px;
-            font-size: 18px;
-            z-index: 200;
-        }
+        .waiting-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.9); padding: 25px 40px; border-radius: 14px; font-size: 16px; z-index: 200; }
         .waiting-msg.hidden { display: none; }
-        
-        /* 无敌提示 */
-        .invincible {
-            position: absolute;
-            top: 10px; left: 50%;
-            transform: translateX(-50%);
-            color: #f9d342;
-            font-size: 14px;
-            font-weight: bold;
-            text-shadow: 0 0 10px #f9d342;
-        }
-        .invincible.hidden { display: none; }
+        .status-bar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: bold; text-shadow: 0 0 8px #f9d342; white-space: nowrap; }
+        .status-bar.hidden { display: none; }
+        #game-container { flex: 5; position: relative; background: #16213e; border: 3px solid #0f3460; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+        canvas { display: block; }
+        .left-panel { flex: 2; background: #0f3460; padding: 12px; border-radius: 10px; display: flex; flex-direction: column; overflow-y: auto; }
+        .left-panel h2 { font-size: 13px; margin-bottom: 10px; color: #4ecca3; flex-shrink: 0; }
+        .left-panel h3 { font-size: 12px; margin: 10px 0 6px; color: #f9d342; flex-shrink: 0; }
+        .left-panel li { font-size: 10px; color: #ccc; line-height: 1.6; }
+        .buff { color: #4ecca3; }
+        .debuff { color: #e94560; }
+        .weapon-select { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+        .weapon-option { font-size: 30px; cursor: pointer; padding: 8px 12px; border-radius: 10px; border: 3px solid transparent; transition: all 0.2s; background: #1a1a2e; }
+        .weapon-option:hover { border-color: #4ecca3; background: #0f3460; }
+        .weapon-option.selected { border-color: #f9d342; background: #0f3460; box-shadow: 0 0 15px #f9d342; }
     </style>
 </head>
 <body>
-    <div class="rankings" id="rankings">
-        <h3>🏆 击杀排行</h3>
-        <div id="rank-list"></div>
-    </div>
-    
     <div id="game-wrapper">
-        <div class="left-panel">
-            <h2>📖 游戏说明</h2>
-            <h3>游戏规则</h3>
-            <ul>
-                <li>4人对战，活到最后获胜</li>
-                <li>每人3点血，被攻击扣1血</li>
-                <li>攻击有5秒冷却时间</li>
-                <li>同一横线或竖线的敌人会被击中</li>
-                <li>新玩家有10秒无敌时间</li>
-            </ul>
-            <h3>🎮 操作说明</h3>
-            <ul>
-                <li><strong>W</strong> - 上</li>
-                <li><strong>S</strong> - 下</li>
-                <li><strong>A</strong> - 左</li>
-                <li><strong>D</strong> - 右</li>
-                <li><strong>J</strong> - 攻击</li>
-            </ul>
-        </div>
-        
-        <div>
+        <div id="top-player-strip"></div>
+        <div id="main-row">
+            <div class="rankings"><h3>击杀排行榜</h3><div id="rank-list"></div></div>
             <div id="game-container">
                 <canvas id="canvas" width="500" height="500"></canvas>
                 <div class="countdown hidden" id="countdown">5</div>
-                <div class="invincible hidden" id="invincible">🛡️ 无敌中</div>
+                <div class="status-bar hidden" id="status-bar"></div>
+            </div>
+            <div class="left-panel">
+                <h2>游戏规则</h2>
+                <ul style="padding-left:15px;font-size:11px;color:#ccc;line-height:1.8;flex-shrink:0">
+                    <li>多人混战</li>
+                    <li>每人3点血</li>
+                    <li>每次击中-1血</li>
+                    <li>每3秒自动攻击</li>
+                    <li>重生后10秒无敌</li>
+                </ul>
+                <h3>操作方式</h3>
+                <ul style="padding-left:15px;font-size:11px;color:#ccc;line-height:1.8;flex-shrink:0">
+                    <li><strong>W</strong> 上 <strong>S</strong> 下</li>
+                    <li><strong>A</strong> 左 <strong>D</strong> 右</li>
+                </ul>
+                <h3>道具说明</h3>
+                <ul style="padding-left:15px;font-size:10px;line-height:1.6;flex-shrink:0">
+                    <li class="buff">💪 强力攻击：一击必杀18秒</li>
+                    <li class="buff">⚡ 极速攻击：0.5秒一次10秒</li>
+                    <li class="buff">🛡️ 无敌护盾：无敌10秒</li>
+                    <li class="debuff">🔒 攻击禁锢：无法攻击20秒</li>
+                    <li class="debuff">💀 伤害陷阱：立即扣1血</li>
+                    <li class="debuff">🔄 方向颠倒：方向反转5秒</li>
+                </ul>
             </div>
         </div>
-        
-        <div class="right-panel" id="info-panel"></div>
     </div>
-    
-    <!-- 输入名字弹窗 -->
     <div class="modal" id="name-modal">
         <div class="modal-content">
-            <h2>🎮 进入游戏</h2>
-            <p style="margin-bottom: 15px; color: #ccc;">请输入你的名字（2-10字符）</p>
-            <input type="text" id="player-name" placeholder="输入名字" maxlength="10">
+            <h2>进入游戏</h2>
+            <p style="margin-bottom:10px;color:#ccc;font-size:13px;">输入名字（2-10个字符）</p>
+            <input type="text" id="player-name" placeholder="你的名字" maxlength="10">
+            <p style="margin:15px 0 8px;color:#ccc;font-size:13px;">选择武器</p>
+            <div class="weapon-select" id="weapon-select">
+                <div class="weapon-option selected" data-emoji="🔪" onclick="selectWeapon(this)">🔪<div style="font-size:10px;color:#ccc">刀</div></div>
+                <div class="weapon-option" data-emoji="🔫" onclick="selectWeapon(this)">🔫<div style="font-size:10px;color:#ccc">枪</div></div>
+                <div class="weapon-option" data-emoji="⚔️" onclick="selectWeapon(this)">⚔️<div style="font-size:10px;color:#ccc">剑</div></div>
+                <div class="weapon-option" data-emoji="🔱" onclick="selectWeapon(this)">🔱<div style="font-size:10px;color:#ccc">戟</div></div>
+                <div class="weapon-option" data-emoji="🔨" onclick="selectWeapon(this)">🔨<div style="font-size:10px;color:#ccc">锤</div></div>
+                <div class="weapon-option" data-emoji="🔱" data-emoji2="🎄" onclick="selectWeapon(this)">🎄<div style="font-size:10px;color:#ccc">叉</div></div>
+            </div>
             <div class="error-msg" id="error-msg"></div>
-            <button onclick="joinGame()">加入游戏</button>
+            <button onclick="joinGame()">加入</button>
         </div>
     </div>
-    
-    <!-- 等待提示 -->
-    <div class="waiting-msg hidden" id="waiting-msg">
-        等待加入... 当前排队: <span id="queue-pos">0</span>
-    </div>
-    
-    <!-- Game Over 弹窗 -->
+    <div class="waiting-msg hidden" id="waiting-msg">等待中... 排队位置：<span id="queue-pos">0</span></div>
     <div class="modal hidden" id="gameover-modal">
         <div class="modal-content">
-            <h2 style="color: #e94560;">💀 GAME OVER</h2>
-            <p style="margin: 15px 0; color: #ccc;">你已被击杀！</p>
-            <p style="color: #f9d342;">击杀数: <span id="final-kills">0</span></p>
-            <button onclick="rejoinGame()" style="background: #4ecca3;">重新加入</button>
+            <h2 style="color:#e94560;">游戏结束</h2>
+            <p style="margin:12px 0;color:#ccc;">你被击杀了！</p>
+            <p style="color:#f9d342;">击杀数：<span id="final-kills">0</span></p>
+            <button onclick="rejoinGame()" style="background:#4ecca3;">重新加入</button>
         </div>
     </div>
-
     <script src="/socket.io/socket.io.js"></script>
     <script>
-    const GRID_SIZE = 10;
-    const CELL_SIZE = 50;
-    const ATTACK_CD = 5000;
-    const INVINCIBLE_TIME = 10000;
+    var GRID_SIZE=10,CELL_SIZE=50,canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+    var socket,players={},projectiles=[],items=[],localPlayerId=null,gameStarted=false,playerName='';
+    var selectedWeapon='🔪';
     
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    function selectWeapon(el){
+        document.querySelectorAll('.weapon-option').forEach(function(e){e.classList.remove('selected');});
+        el.classList.add('selected');
+        selectedWeapon=el.getAttribute('data-emoji');
+    }
     
-    let socket;
-    let players = {};
-    let projectiles = [];
-    let localPlayerId = null;
-    let gameStarted = false;
-    let playerName = '';
-    
-    // 连接服务器
-    function connectServer() {
-        socket = io();
-        
-        socket.on('joined', (data) => {
-            localPlayerId = data.playerId;
-            players = data.allPlayers;
-            document.getElementById('name-modal').classList.add('hidden');
-            startCountdown();
+    function connectServer(){
+        socket=io();
+        socket.on('joined',function(data){
+            localPlayerId=data.playerId;players=data.allPlayers;items=data.items||[];
+            document.getElementById('name-modal').classList.add('hidden');startCountdown();
         });
-        
-        socket.on('waiting', (data) => {
-            document.getElementById('queue-pos').textContent = data.position;
-            document.getElementById('waiting-msg').classList.remove('hidden');
+        socket.on('waiting',function(data){document.getElementById('queue-pos').textContent=data.position;document.getElementById('waiting-msg').classList.remove('hidden');});
+        socket.on('playerJoined',function(data){players[data.player.id]=data.player;});
+        socket.on('playerLeft',function(data){if(players[data.id])delete players[data.id];});
+        socket.on('playerMoved',function(data){if(players[data.id]){players[data.id].x=data.x;players[data.id].y=data.y;}});
+        socket.on('playerHit',function(data){if(players[data.playerId]){players[data.playerId].hp=data.hp;if(data.playerId===localPlayerId&&data.hp<=0)showGameOver();}});
+        socket.on('playerRespawned',function(data){
+            if(players[data.playerId]){players[data.playerId].x=data.x;players[data.playerId].y=data.y;players[data.playerId].hp=data.hp;players[data.playerId].invincibleUntil=data.invincibleUntil;document.getElementById('gameover-modal').classList.add('hidden');}
         });
-        
-        socket.on('playerJoined', (data) => {
-            players[data.player.id] = data.player;
-        });
-        
-        socket.on('playerLeft', (data) => {
-            if (players[data.id]) {
-                delete players[data.id];
-            }
-        });
-        
-        socket.on('playerMoved', (data) => {
-            if (players[data.id]) {
-                players[data.id].x = data.x;
-                players[data.id].y = data.y;
-            }
-        });
-        
-        socket.on('playerHit', (data) => {
-            if (players[data.playerId]) {
-                players[data.playerId].hp = data.hp;
-                
-                // 检测本地玩家是否死亡
-                if (data.playerId === localPlayerId && data.hp <= 0) {
-                    showGameOver();
-                }
-            }
-        });
-        
-        socket.on('playerRespawned', (data) => {
-            if (players[data.playerId]) {
-                players[data.playerId].x = data.x;
-                players[data.playerId].y = data.y;
-                players[data.playerId].hp = data.hp;
-                players[data.playerId].invincibleUntil = data.invincibleUntil;
-                // 重新加入后关闭 Game Over
-                document.getElementById('gameover-modal').classList.add('hidden');
-            }
-        });
-        
-        socket.on('projectilesUpdate', (data) => {
-            projectiles = data.projectiles;
-        });
-        
-        socket.on('playerStatesUpdate', (data) => {
-            // 同步玩家的 lastAttack 和无敌状态
-            Object.keys(data.states).forEach(id => {
-                if (players[id]) {
-                    players[id].lastAttack = data.states[id].lastAttack;
-                    players[id].invincibleUntil = data.states[id].invincibleUntil;
-                }
+        socket.on('projectilesUpdate',function(data){projectiles=data.projectiles;});
+        socket.on('playerStatesUpdate',function(data){
+            Object.keys(data.states).forEach(function(id){
+                if(players[id]){var s=data.states[id];players[id].lastAttack=s.lastAttack;players[id].invincibleUntil=s.invincibleUntil;players[id].powerAttackUntil=s.powerAttackUntil;players[id].fastAttackUntil=s.fastAttackUntil;players[id].disableAttackUntil=s.disableAttackUntil;players[id].reverseUntil=s.reverseUntil;}
             });
         });
-        
-        socket.on('rankingsUpdate', (data) => {
-            updateRankings(data.rankings);
+        socket.on('rankingsUpdate',function(data){updateRankings(data.rankings);});
+        socket.on('itemSpawned',function(data){items.push(data.item);});
+        socket.on('itemCollected',function(data){items=items.filter(function(i){return i.id!==data.itemId;});});
+        socket.on('playerEffectUpdate',function(data){
+            if(players[data.playerId]){var e=data.effects;players[data.playerId].powerAttackUntil=e.powerAttackUntil;players[data.playerId].fastAttackUntil=e.fastAttackUntil;players[data.playerId].invincibleUntil=e.invincibleUntil;players[data.playerId].disableAttackUntil=e.disableAttackUntil;players[data.playerId].reverseUntil=e.reverseUntil;}
         });
     }
     
-    // 加入游戏
-    function joinGame() {
-        const input = document.getElementById('player-name');
-        const name = input.value.trim();
-        
-        if (name.length < 2 || name.length > 10) {
-            document.getElementById('error-msg').textContent = '名字需要2-10个字符';
-            return;
-        }
-        
-        playerName = name;
-        socket.emit('join', { name: name });
+    function joinGame(){
+        var n=document.getElementById('player-name').value.trim();
+        if(n.length<2||n.length>10){document.getElementById('error-msg').textContent='名字需要2-10个字符';return;}
+        playerName=n;socket.emit('join',{name:n,weaponEmoji:selectedWeapon});
+    }
+    function showGameOver(){document.getElementById('final-kills').textContent=players[localPlayerId]?players[localPlayerId].kills||0:0;document.getElementById('gameover-modal').classList.remove('hidden');}
+    function rejoinGame(){document.getElementById('gameover-modal').classList.add('hidden');gameStarted=false;localPlayerId=null;players={};projectiles=[];items=[];document.getElementById('name-modal').classList.remove('hidden');document.getElementById('player-name').value=playerName;}
+    
+    function startCountdown(){var el=document.getElementById('countdown'),c=5;el.classList.remove('hidden');el.textContent=c;var t=setInterval(function(){c--;if(c>0)el.textContent=c;else{clearInterval(t);el.classList.add('hidden');gameStarted=true;}},1000);}
+    
+    function updateRankings(r){var list=document.getElementById('rank-list'),t=r.slice(0,10);if(t.length===0){list.innerHTML='<div style="text-align:center;color:#555;font-size:11px;padding-top:10px">暂无数据</div>';return;}list.innerHTML=t.map(function(x,i){return '<div class="rank-item"><span>'+(i+1)+'. '+x.name+'</span><span style="color:'+x.color+'">'+x.kills+'杀/'+x.deaths+'死</span></div>';}).join('');}
+    
+    function drawGrid(){ctx.fillStyle='#16213e';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#0f3460';ctx.lineWidth=1;for(var i=0;i<=GRID_SIZE;i++){ctx.beginPath();ctx.moveTo(i*CELL_SIZE,0);ctx.lineTo(i*CELL_SIZE,canvas.height);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*CELL_SIZE);ctx.lineTo(canvas.width,i*CELL_SIZE);ctx.stroke();}}
+    
+    function drawItems(){
+        items.forEach(function(item){
+            var cx=item.x*CELL_SIZE+CELL_SIZE/2,cy=item.y*CELL_SIZE+CELL_SIZE/2,now=Date.now(),pulse=Math.sin(now/300)*0.15+0.85;
+            ctx.save();ctx.shadowColor=item.type==='buff'?'#4ecca3':'#e94560';ctx.shadowBlur=20*pulse;
+            ctx.fillStyle=item.type==='buff'?'rgba(78,204,163,0.25)':'rgba(233,69,96,0.25)';ctx.beginPath();ctx.arc(cx,cy,20*pulse,0,Math.PI*2);ctx.fill();ctx.restore();
+            ctx.fillStyle=item.type==='buff'?'rgba(78,204,163,0.5)':'rgba(233,69,96,0.5)';ctx.beginPath();ctx.arc(cx,cy,14,0,Math.PI*2);ctx.fill();
+            ctx.font='20px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(item.emoji,cx,cy);
+        });
     }
     
-    // 显示 Game Over
-    function showGameOver() {
-        const kills = players[localPlayerId]?.kills || 0;
-        document.getElementById('final-kills').textContent = kills;
-        document.getElementById('gameover-modal').classList.remove('hidden');
-    }
-    
-    // 重新加入游戏
-    function rejoinGame() {
-        // 隐藏 Game Over
-        document.getElementById('gameover-modal').classList.add('hidden');
-        
-        // 重置状态
-        gameStarted = false;
-        localPlayerId = null;
-        players = {};
-        projectiles = [];
-        
-        // 显示名字输入框
-        document.getElementById('name-modal').classList.remove('hidden');
-        document.getElementById('player-name').value = playerName;
-    }
-    
-    // 倒计时
-    function startCountdown() {
-        const countdownEl = document.getElementById('countdown');
-        let count = 5;
-        countdownEl.classList.remove('hidden');
-        countdownEl.textContent = count;
-        
-        const timer = setInterval(() => {
-            count--;
-            if (count > 0) {
-                countdownEl.textContent = count;
-            } else {
-                clearInterval(timer);
-                countdownEl.classList.add('hidden');
-                gameStarted = true;
-            }
-        }, 1000);
-    }
-    
-    // 更新排行榜
-    function updateRankings(rankings) {
-        const list = document.getElementById('rank-list');
-        if (rankings.length === 0) {
-            list.innerHTML = '<div style="text-align:center;color:#666;font-size:12px">暂无数据</div>';
-            return;
-        }
-        list.innerHTML = rankings.map((r, i) => `
-            <div class="rank-item">
-                <span>${i+1}. ${r.name}</span>
-                <span style="color:${r.color}">${r.kills}杀/${r.deaths}死</span>
-            </div>
-        `).join('');
-    }
-    
-    // 绘制棋盘
-    function drawGrid() {
-        ctx.fillStyle = '#16213e';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.strokeStyle = '#0f3460';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= GRID_SIZE; i++) {
-            ctx.beginPath();
-            ctx.moveTo(i * CELL_SIZE, 0);
-            ctx.lineTo(i * CELL_SIZE, canvas.height);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(0, i * CELL_SIZE);
-            ctx.lineTo(canvas.width, i * CELL_SIZE);
-            ctx.stroke();
-        }
-        
-        ctx.fillStyle = '#0f3460';
-        ctx.beginPath();
-        ctx.arc(5*CELL_SIZE - CELL_SIZE/2, 5*CELL_SIZE - CELL_SIZE/2, 15, 0, Math.PI*2);
-        ctx.fill();
-    }
-    
-    // 绘制武器
-    function drawWeapon(p, cx, cy) {
-        const weaponOffset = p.positionIndex === 0 ? {x: 12, y: 8} : 
-                            p.positionIndex === 1 ? {x: -20, y: 8} :
-                            p.positionIndex === 2 ? {x: 12, y: -5} : {x: -20, y: -5};
-        
-        const wx = cx + weaponOffset.x;
-        const wy = cy + weaponOffset.y;
-        
-        ctx.save();
-        ctx.translate(wx, wy);
-        
-        if (p.positionIndex === 0) {
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-3, 5);
-            ctx.lineTo(0, -8);
-            ctx.lineTo(3, 5);
-            ctx.stroke();
-        } else if (p.positionIndex === 1) {
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, -10);
-            ctx.lineTo(0, 8);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(0, -10, 2, 0, Math.PI*2);
-            ctx.fill();
-        } else if (p.positionIndex === 2) {
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, 6);
-            ctx.lineTo(0, -10);
-            ctx.moveTo(-3, 0);
-            ctx.lineTo(3, 0);
-            ctx.stroke();
-        } else {
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, 8);
-            ctx.lineTo(0, -10);
-            ctx.moveTo(-4, -5);
-            ctx.lineTo(4, -5);
-            ctx.stroke();
-        }
-        
-        ctx.restore();
-    }
-    
-    // 绘制玩家
-    function drawPlayer(p) {
-        if (p.hp <= 0) return;
-        
-        const cx = p.x * CELL_SIZE + CELL_SIZE/2;
-        const cy = p.y * CELL_SIZE + CELL_SIZE/2;
-        
-        // 无敌闪烁效果
-        if (p.invincibleUntil && Date.now() < p.invincibleUntil) {
-            if (Math.floor(Date.now() / 200) % 2 === 0) return;
-        }
-        
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        
-        // 头
-        ctx.beginPath();
-        ctx.arc(cx, cy - 12, 8, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // 身体
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - 4);
-        ctx.lineTo(cx, cy + 12);
-        ctx.stroke();
-        
-        // 手臂
-        ctx.beginPath();
-        ctx.moveTo(cx - 10, cy + 2);
-        ctx.lineTo(cx + 10, cy + 2);
-        ctx.stroke();
-        
-        // 腿
-        ctx.beginPath();
-        ctx.moveTo(cx - 8, cy + 20);
-        ctx.lineTo(cx, cy + 12);
-        ctx.lineTo(cx + 8, cy + 20);
-        ctx.stroke();
-        
-        // 武器
-        drawWeapon(p, cx, cy);
-        
-        // 名字
-        ctx.fillStyle = '#fff';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.name, cx, p.y * CELL_SIZE - 12);
-        
+    function drawPlayer(p){
+        if(p.hp<=0)return;
+        var cx=p.x*CELL_SIZE+CELL_SIZE/2,cy=p.y*CELL_SIZE+CELL_SIZE/2,now=Date.now();
+        if(p.invincibleUntil&&now<p.invincibleUntil){if(Math.floor(now/200)%2===0)return;}
+        // 效果光环
+        if(now<p.powerAttackUntil){ctx.strokeStyle='#f9d342';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);ctx.stroke();}
+        if(now<p.fastAttackUntil){ctx.strokeStyle='#48dbfb';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,22,0,Math.PI*2);ctx.stroke();}
+        if(now<p.disableAttackUntil){ctx.strokeStyle='#e94560';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,24,0,Math.PI*2);ctx.stroke();}
+        if(now<p.reverseUntil){ctx.strokeStyle='#ff9ff3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,26,0,Math.PI*2);ctx.stroke();}
+        // 人物
+        ctx.strokeStyle=p.color;ctx.lineWidth=2;ctx.lineCap='round';
+        ctx.beginPath();ctx.arc(cx,cy-8,5,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(cx,cy-3);ctx.lineTo(cx,cy+8);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(cx-8,cy+2);ctx.lineTo(cx+8,cy+2);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(cx-6,cy+16);ctx.lineTo(cx,cy+8);ctx.lineTo(cx+6,cy+16);ctx.stroke();
+        // 武器emoji在人物旁
+        ctx.font='12px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(p.weaponEmoji||'🔪',cx+14,cy);
+        // 名字+效果
+        var nameY=p.y*CELL_SIZE+10;
+        ctx.fillStyle='#fff';ctx.font='9px Arial';ctx.textAlign='center';ctx.fillText(p.name,cx,nameY);
         // 血条
-        for (let i = 0; i < 3; i++) {
-            ctx.fillStyle = i < p.hp ? '#e94560' : '#333';
-            ctx.fillRect(p.x * CELL_SIZE + i * 14 + 5, p.y * CELL_SIZE - 5, 10, 6);
-        }
-        
-        // CD指示器
-        if (p.lastAttack) {
-            const now = Date.now();
-            const cdLeft = Math.max(0, ATTACK_CD - (now - p.lastAttack));
-            if (cdLeft > 0) {
-                ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                ctx.font = '10px Arial';
-                ctx.fillText(Math.ceil(cdLeft/1000)+'s', cx, cy + 25);
-            }
-        }
+        for(var i=0;i<3;i++){ctx.fillStyle=i<p.hp?'#e94560':'#333';ctx.fillRect(p.x*CELL_SIZE+i*14+5,p.y*CELL_SIZE+CELL_SIZE-8,8,5);}
     }
     
-    // 绘制弹道
-    function drawProjectiles() {
-        projectiles.forEach(proj => {
-            ctx.fillStyle = proj.color;
-            ctx.beginPath();
-            ctx.arc(
-                proj.x * CELL_SIZE + CELL_SIZE/2,
-                proj.y * CELL_SIZE + CELL_SIZE/2,
-                8, 0, Math.PI*2
-            );
-            ctx.fill();
-            
-            ctx.shadowColor = proj.color;
-            ctx.shadowBlur = 15;
-            ctx.fill();
-            ctx.shadowBlur = 0;
+    function drawProjectiles(){
+        projectiles.forEach(function(proj){
+            var px=proj.x*CELL_SIZE+CELL_SIZE/2,py=proj.y*CELL_SIZE+CELL_SIZE/2;
+            // 弹道显示为武器emoji
+            var emoji=proj.weaponEmoji||'🔪';
+            ctx.font=(proj.isPowerAttack?'16px':'13px')+' Arial';
+            ctx.textAlign='center';ctx.textBaseline='middle';
+            if(proj.isPowerAttack){ctx.shadowColor='#f9d342';ctx.shadowBlur=15;}
+            ctx.fillText(emoji,px,py);
+            ctx.shadowBlur=0;
         });
     }
     
-    // 按键
-    const keys = {};
-    let lastMoveTime = 0;
-    const MOVE_DELAY = 150;
+    var keys={},lastMoveTime=0,MOVE_DELAY=150;
+    document.addEventListener('keydown',function(e){keys[e.key.toLowerCase()]=true;});
+    document.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;});
     
-    document.addEventListener('keydown', e => {
-        keys[e.key.toLowerCase()] = true;
-        
-        if (e.key.toLowerCase() === 'j' && gameStarted) {
-            socket.emit('attack');
+    function tryMove(){
+        var now=Date.now();
+        if(now-lastMoveTime>MOVE_DELAY){
+            var dx=0,dy=0;
+            if(keys['w'])dy=-1;else if(keys['s'])dy=1;else if(keys['a'])dx=-1;else if(keys['d'])dx=1;
+            if(dx!==0||dy!==0){socket.emit('move',{dx:dx,dy:dy});lastMoveTime=now;}
         }
-    });
-    document.addEventListener('keyup', e => {
-        keys[e.key.toLowerCase()] = false;
-    });
+    }
     
-    // 移动
-    function tryMove() {
-        const now = Date.now();
-        if (now - lastMoveTime > MOVE_DELAY) {
-            let dx = 0, dy = 0;
-            if (keys['w']) dy = -1;
-            else if (keys['s']) dy = 1;
-            else if (keys['a']) dx = -1;
-            else if (keys['d']) dx = 1;
-            
-            if (dx !== 0 || dy !== 0) {
-                socket.emit('move', { dx, dy });
-                lastMoveTime = now;
+    function getActiveEffects(p){
+        var now=Date.now(),effects=[];
+        if(now<p.invincibleUntil)effects.push({emoji:'🛡️',text:'无敌'+Math.ceil((p.invincibleUntil-now)/1000)+'s',color:'#4ecca3'});
+        if(now<p.powerAttackUntil)effects.push({emoji:'💪',text:'强力'+Math.ceil((p.powerAttackUntil-now)/1000)+'s',color:'#f9d342'});
+        if(now<p.fastAttackUntil)effects.push({emoji:'⚡',text:'极速'+Math.ceil((p.fastAttackUntil-now)/1000)+'s',color:'#48dbfb'});
+        if(now<p.disableAttackUntil)effects.push({emoji:'🔒',text:'禁锢'+Math.ceil((p.disableAttackUntil-now)/1000)+'s',color:'#e94560'});
+        if(now<p.reverseUntil)effects.push({emoji:'🔄',text:'颠倒'+Math.ceil((p.reverseUntil-now)/1000)+'s',color:'#ff9ff3'});
+        return effects;
+    }
+    
+    function updateStatusBar(){
+        var p=players[localPlayerId],el=document.getElementById('status-bar');
+        if(!p){el.classList.add('hidden');return;}
+        var effects=getActiveEffects(p);
+        if(effects.length>0){el.innerHTML=effects.map(function(e){return '<span style="color:'+e.color+'">'+e.emoji+' '+e.text+'</span>';}).join(' &nbsp; ');el.classList.remove('hidden');}
+        else{el.classList.add('hidden');}
+    }
+    
+    function updateTopPlayerStrip(){
+        var strip=document.getElementById('top-player-strip'),pl=Object.values(players),now=Date.now();
+        if(pl.length===0){strip.innerHTML='';return;}
+        var t10=pl.slice(0,10),rows=[t10.slice(0,5),t10.slice(5,10)],html='';
+        rows.forEach(function(row){
+            html+='<div style="display:flex;gap:6px;">';
+            for(var i=0;i<5;i++){
+                var p=row[i];
+                if(p){
+                    var badges=getActiveEffects(p);
+                    var badgeHtml=badges.length>0?'<div class="effect-badges">'+badges.map(function(b){return '<span style="color:'+b.color+'" title="'+b.text+'">'+b.emoji+'</span>';}).join('')+'</div>':'';
+                    html+='<div class="top-player-card" style="border-left-color:'+p.color+';flex:2"><div class="name">'+(p.weaponEmoji||'🔪')+' '+p.name+'</div><div class="hp-row">'+[0,1,2].map(function(j){return '<div class="hp-dot '+(j>=p.hp?'lost':'')+'"></div>';}).join('')+'</div>'+badgeHtml+'</div>';
+                }else{html+='<div style="flex:2"></div>';}
             }
-        }
+            html+='</div>';
+        });
+        strip.innerHTML=html;
     }
     
-    // 更新无敌显示
-    function updateInvincible() {
-        const p = players[localPlayerId];
-        const el = document.getElementById('invincible');
-        if (p && p.invincibleUntil && Date.now() < p.invincibleUntil) {
-            const left = Math.ceil((p.invincibleUntil - Date.now()) / 1000);
-            el.textContent = `🛡️ 无敌中 ${left}s`;
-            el.classList.remove('hidden');
-        } else {
-            el.classList.add('hidden');
-        }
-    }
-    
-    // 更新信息面板
-    function updateInfoPanel() {
-        const panel = document.getElementById('info-panel');
-        const playerList = Object.values(players);
-        
-        panel.innerHTML = playerList.map(p => `
-            <div class="player-info" style="border-left-color: ${p.color}">
-                <div>${p.weapon} ${p.name} ${p.hp <= 0 ? '(阵亡)' : ''}</div>
-                <div class="health-bar">
-                    ${[0,1,2].map(i => `<div class="heart ${i >= p.hp ? 'lost' : ''}"></div>`).join('')}
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    // 游戏循环
-    function gameLoop() {
-        if (gameStarted && localPlayerId) {
-            tryMove();
-        }
-        
-        drawGrid();
-        drawProjectiles();
-        Object.values(players).forEach(drawPlayer);
-        
-        updateInfoPanel();
-        updateInvincible();
-        
+    function gameLoop(){
+        if(gameStarted&&localPlayerId)tryMove();
+        drawGrid();drawItems();drawProjectiles();Object.values(players).forEach(drawPlayer);updateTopPlayerStrip();updateStatusBar();
         requestAnimationFrame(gameLoop);
     }
     
-    // 启动
-    connectServer();
-    gameLoop();
-    
-    document.getElementById('player-name').addEventListener('keypress', e => {
-        if (e.key === 'Enter') joinGame();
-    });
+    connectServer();gameLoop();
+    document.getElementById('player-name').addEventListener('keypress',function(e){if(e.key==='Enter')joinGame();});
     </script>
 </body>
 </html>
